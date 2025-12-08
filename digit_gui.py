@@ -17,6 +17,8 @@ MAX_NUM_FRAMES = 600
 MAX_INTERACTION_NUM = 9999
 MAX_COUNTDOWN_SECS = 10
 
+TARGET_FORCE_LEVEL = 3
+
 
 class DigitGUI:
     """
@@ -70,6 +72,7 @@ class DigitGUI:
         self.root.protocol('WM_DELETE_WINDOW', self.close_app)
 
     # --- Initialization & Setup ---
+
     def setup_gui(self):
         """Set up the main GUI components after a successful connection to DIGIT."""
 
@@ -444,6 +447,7 @@ class DigitGUI:
         self.root.destroy()
 
     # --- GUI State Management ---
+
     def enable_gui(self):
         """Enable interactive GUI elements."""
 
@@ -467,6 +471,7 @@ class DigitGUI:
         self.save_dir_button.configure(state='disabled')
 
     # --- Preferences ---
+
     def save_prefs(self):
         """Save user preferences to a JSON file."""
 
@@ -535,6 +540,7 @@ class DigitGUI:
             self.refresh_save_dir_entry()
 
     # --- Live Preview & Video ---
+
     def update_video_frame(self):
         """Update the video frame in the live preview."""
 
@@ -546,7 +552,8 @@ class DigitGUI:
                 if frame is not None:
                     # If capturing frames, save the current frame
                     if self.capturing:
-                        self.capture_frame(frame)
+                        if self.filter_frame(frame):
+                            self.capture_frame(frame)
                     # Display the current frame in the video label
                     # Convert frame (BGR to RGB)
                     frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -573,6 +580,7 @@ class DigitGUI:
         self.update_interval = 1000 // fps
 
     # --- User Interactions ---
+
     def on_intensity_slider_change(self, value):
         """
         Handle the slider change event to set the RGB intensity.
@@ -722,6 +730,7 @@ class DigitGUI:
         self.countdown_secs_spinbox.insert(0, self.countdown_secs)
 
     # --- Capture Logic ---
+
     def start_capture(self):
         """Start capturing frames based on user settings."""
 
@@ -797,6 +806,59 @@ class DigitGUI:
             # Save the frame in the directory specified by the user
             return self.user_save_dir
 
+    def get_force_level(self, reading):
+        """
+        Get the force level based on the reading from the serial connection.
+
+        Args:
+            reading (float): The reading from the serial connection.
+
+        Returns:
+            int: The force level (1, 2 or 3) or 0 if invalid.
+        """
+
+        if reading > 0 and reading < 0.99:
+            return 1
+        elif reading >= 0.99 and reading <= 2.99:
+            return 2
+        elif reading > 2.99:
+            return 3
+        else:
+            return 0
+
+    def filter_frame(self, frame):
+        """
+        Filter frames based on the target force level.
+
+        Args:
+            frame (numpy.ndarray): The frame to filter.
+
+        Returns:
+            bool: True if the frame meets the target force level, False otherwise.
+        """
+
+        # Get the current reading from the serial connection
+        reading = self.sc.get_reading()
+
+        # If the reading is valid
+        if reading is not None:
+            try:
+                # Convert to float
+                reading_float = float(reading)
+            except ValueError:
+                # Set a deliberately incorrect value
+                reading_float = -1.0
+        # If the serial connection is lost
+        else:
+            # Disable the GUI and show a lost connection popup
+            print('Error reading from serial connection.')
+            self.capturing = False
+            self.disable_gui()
+            self.show_lost_connection_popup('Serial')
+
+        # Return whether the frame meets the target force level
+        return self.get_force_level(reading_float) == TARGET_FORCE_LEVEL
+
     def capture_frame(self, frame):
         """
         Capture a single frame and save it to the specified directory.
@@ -810,19 +872,6 @@ class DigitGUI:
         # Update the capture status label with the current frame count
         self.capture_status_label.config(
             text=f'Capturing frame {self.frame_count}/{self.num_frames}')
-
-        reading = self.sc.get_reading()
-        # If the reading is valid, print it
-        if reading is not None:
-            print(f'{self.frame_count}: Serial reading: {reading}')
-        # If the serial connection is lost
-        else:
-            # Disable the GUI and show a lost connection popup
-            print('Error reading from serial connection.')
-            self.capturing = False
-            self.disable_gui()
-            self.show_lost_connection_popup('Serial')
-
         # Save the frame to a file
         self.save_frame_file(frame)
         # Check if we have captured enough frames
