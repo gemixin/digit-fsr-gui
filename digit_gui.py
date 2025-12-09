@@ -6,6 +6,7 @@ from digit_controller import DigitController
 from digit_popup import DigitPopup
 from serial_controller import SerialController
 import json
+import csv
 import os
 
 # Constants
@@ -16,8 +17,7 @@ RED = 'misty rose'
 MAX_NUM_FRAMES = 600
 MAX_INTERACTION_NUM = 9999
 MAX_COUNTDOWN_SECS = 10
-
-TARGET_FORCE_LEVEL = 3
+MAX_FORCE_LEVEL = 3
 
 
 class DigitGUI:
@@ -54,6 +54,7 @@ class DigitGUI:
         self.interaction_num = 1
         self.countdown_secs = 1
         self.countdown = False
+        self.target_force_level = 1
 
         # Set up the root window
         self.root.title('DIGIT GUI')
@@ -212,6 +213,22 @@ class DigitGUI:
         )
         # ---------------------------------
 
+        # --- Force level components ---
+        # Create label
+        force_level_label = tk.Label(settings_frame,
+                                     text='Force Level')
+        # Create a Spinbox to allow user to select interaction number
+        force_level_validator = (self.root.register(
+            self.validate_force_level), '%P')
+        self.force_level_spinbox = tk.Spinbox(
+            settings_frame,
+            width=4,
+            from_=1, to=MAX_FORCE_LEVEL,
+            validate='key',
+            validatecommand=force_level_validator
+        )
+        # ---------------------------------
+
         # Place the frames into the settings frame, aligning them to the left
         intensity_label.grid(row=0, column=0, sticky='ws',
                              padx=PADDING, pady=PADDING)  # Align to bottom of slider
@@ -233,6 +250,10 @@ class DigitGUI:
                                   padx=PADDING, pady=PADDING)
         self.countdown_secs_spinbox.grid(row=4, column=1, sticky='w',
                                          padx=PADDING/2, pady=PADDING)
+        force_level_label.grid(row=5, column=0, sticky='w',
+                               padx=PADDING, pady=PADDING)
+        self.force_level_spinbox.grid(row=5, column=1, sticky='w',
+                                      padx=PADDING/2, pady=PADDING)
 
         # Return the settings frame to be placed in the main GUI
         return settings_frame
@@ -457,6 +478,7 @@ class DigitGUI:
         self.num_frames_spinbox.configure(state='normal')
         self.interaction_num_spinbox.configure(state='normal')
         self.countdown_secs_spinbox.configure(state='normal')
+        self.force_level_spinbox.configure(state='normal')
         self.save_dir_button.configure(state='normal')
 
     def disable_gui(self):
@@ -468,6 +490,7 @@ class DigitGUI:
         self.num_frames_spinbox.configure(state='disabled')
         self.interaction_num_spinbox.configure(state='disabled')
         self.countdown_secs_spinbox.configure(state='disabled')
+        self.force_level_spinbox.configure(state='disabled')
         self.save_dir_button.configure(state='disabled')
 
     # --- Preferences ---
@@ -482,6 +505,7 @@ class DigitGUI:
             'interaction_num': self.interaction_num,
             'countdown_secs': self.countdown_secs,
             'countdown': self.countdown,
+            'target_force_level': self.target_force_level,
             'user_save_dir': self.user_save_dir,
         }
         with open(USER_PREFS_FILE, 'w') as f:
@@ -534,6 +558,10 @@ class DigitGUI:
             # Set the countdown toggle
             self.countdown = prefs['countdown']
             self.countdown_var.set(self.countdown)
+        if 'target_force_level' in prefs:
+            # Set the target force level
+            self.target_force_level = prefs['target_force_level']
+            self.refresh_force_level_spinbox()
         if 'user_save_dir' in prefs:
             # Set the user save directory
             self.user_save_dir = prefs['user_save_dir']
@@ -552,8 +580,11 @@ class DigitGUI:
                 if frame is not None:
                     # If capturing frames, save the current frame
                     if self.capturing:
-                        if self.filter_frame(frame):
-                            self.capture_frame(frame)
+                        # Filter frame based on force level
+                        force_reading = self.filter_frame(frame)
+                        # If the frame meets the target force level, capture it
+                        if force_reading is not None:
+                            self.capture_frame(frame, force_reading)
                     # Display the current frame in the video label
                     # Convert frame (BGR to RGB)
                     frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -711,6 +742,32 @@ class DigitGUI:
         # If not valid, return False
         return False
 
+    def validate_force_level(self, value):
+        """
+        Validate the input for the force level spinbox and if valid, update the
+        target force level.
+
+        Args:
+            value (str): The value to validate.
+
+        Returns:
+            bool: True if valid, False otherwise.
+        """
+
+        # Allow empty input for editing
+        if value == '':
+            return True
+        if value.isdigit():
+            # Convert the value to an integer
+            num = int(value)
+            # Check if the number is within the valid range
+            if 1 <= num <= MAX_FORCE_LEVEL:
+                # If valid, update the target force level
+                self.target_force_level = num
+                return True
+        # If not valid, return False
+        return False
+
     def refresh_num_frames_spinbox(self):
         """Refresh the number of frames spinbox with the current number of frames."""
 
@@ -728,6 +785,12 @@ class DigitGUI:
 
         self.countdown_secs_spinbox.delete(0, 'end')
         self.countdown_secs_spinbox.insert(0, self.countdown_secs)
+
+    def refresh_force_level_spinbox(self):
+        """Refresh the force level spinbox with the current target force level."""
+
+        self.force_level_spinbox.delete(0, 'end')
+        self.force_level_spinbox.insert(0, self.target_force_level)
 
     # --- Capture Logic ---
 
@@ -834,7 +897,8 @@ class DigitGUI:
             frame (numpy.ndarray): The frame to filter.
 
         Returns:
-            bool: True if the frame meets the target force level, False otherwise.
+            float: The force reading if the frame meets the target force level,
+            None otherwise.
         """
 
         # Get the current reading from the serial connection
@@ -856,15 +920,20 @@ class DigitGUI:
             self.disable_gui()
             self.show_lost_connection_popup('Serial')
 
-        # Return whether the frame meets the target force level
-        return self.get_force_level(reading_float) == TARGET_FORCE_LEVEL
+        # If the frame meets the target force level
+        if self.get_force_level(reading_float) == self.target_force_level:
+            # Return the reading
+            return reading_float
+        else:
+            return None
 
-    def capture_frame(self, frame):
+    def capture_frame(self, frame, force_reading):
         """
         Capture a single frame and save it to the specified directory.
 
         Args:
             frame (numpy.ndarray): The frame to capture.
+            force_reading (float): The force reading associated with the frame.
         """
 
         # Increment the frame count
@@ -874,10 +943,52 @@ class DigitGUI:
             text=f'Capturing frame {self.frame_count}/{self.num_frames}')
         # Save the frame to a file
         self.save_frame_file(frame)
+        # Save force reading to CSV
+        self.save_force_reading(force_reading)
         # Check if we have captured enough frames
         if self.frame_count >= self.num_frames:
             # End the capture process
             self.capture_complete()
+
+    def save_force_reading(self, force_reading):
+        """
+        Save the force reading to a CSV file in the specified save directory.
+
+        Args:
+            force_reading (float): The force reading to save.
+        """
+
+        # Define the CSV file path
+        csv_file = f'{self.save_dir}/force_readings.csv'
+        # Check if the CSV file already exists
+        file_exists = os.path.isfile(csv_file)
+        try:
+            with open(csv_file, mode='a', newline='') as file:
+                writer = csv.writer(file)
+                # If the file does not exist, write the header
+                if not file_exists:
+                    writer.writerow(['frame', 'fsr_voltage'])
+                # Write the frame filename and force reading
+                fname = f'{self.get_frame_filename()}.jpg'
+                writer.writerow([fname, force_reading])
+        except Exception as e:
+            print(f'Error saving force reading: {e}')
+
+    def get_frame_filename(self):
+        """
+        Get the filename for the current frame based on user settings.
+
+        Returns:
+            str: The filename for the current frame.
+        """
+
+        # If we are capturing multiple frames, use the frame count to name the file
+        if self.num_frames > 1:
+            fname = f'frame_{self.pad_number(self.frame_count)}'
+        # If we are only capturing one frame, use the interaction number to name the file
+        else:
+            fname = f'interaction_{self.pad_number(self.interaction_num)}'
+        return fname
 
     def save_frame_file(self, frame):
         """
@@ -887,13 +998,8 @@ class DigitGUI:
             frame (numpy.ndarray): The frame to save.
         """
 
-        # Save the frame
-        # If we are capturing multiple frames, use the frame count to name the file
-        if self.num_frames > 1:
-            fname = f'frame_{self.pad_number(self.frame_count)}'
-        # If we are only capturing one frame, use the interaction number to name the file
-        else:
-            fname = f'interaction_{self.pad_number(self.interaction_num)}'
+        # Get the filename for the current frame
+        fname = self.get_frame_filename()
         # Save the frame as a JPEG file in the save directory
         try:
             cv2.imwrite(f'{self.save_dir}/{fname}.jpg', frame)
