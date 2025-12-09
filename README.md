@@ -11,6 +11,8 @@ This version adds functionality specifically for force-conditioned tactile data 
 - Filters captured tactile images according to the chosen force level.
 - Logs FSR voltage readings alongside corresponding tactile images in a CSV file.
 
+![DIGIT-FSR-GUI Screenshot](images/screenshot.png)
+
 ## Requirements
 
 - **Operating System:** Linux only (DIGIT sensors are supported on Linux only)  
@@ -33,6 +35,41 @@ This version adds functionality specifically for force-conditioned tactile data 
 3. **Install required packages:**  
     ```bash
     python3 -m pip install -r requirements.txt
+
+## Force
+
+FSR voltage data is mapped to three discrete target force levels (corresponding to 'contact only', 'light press' and 'firm press' with the sensor). See [DIGIT Force Calibration](https://github.com/gemixin/digit_force_calibration) for the force level thresholds and Newton calibrations.
+
+
+### Setup
+
+1. Attach an FSR ([Grove Round Force Sensor](https://wiki.seeedstudio.com/Grove-Round_Force_Sensor_FSR402/)) to the rear of the tactile sensor using adhesive.
+
+2. Connect the FSR to a Raspberry Pi Pico via a [Grove Shield](https://wiki.seeedstudio.com/Grove-Starter-Kit-for-Raspberry-Pi-Pico/) (A0).
+
+3. Attach an LED Bar ([Grove LED Bar](https://wiki.seeedstudio.com/Grove-LED_Bar/)) to the Grove Shield (D16).
+
+4. Connect the Pico to your computer via USB.
+
+5. Upload the scripts from the `pico` folder to the Pico.
+
+6. Close any programs accessing the Pico (e.g., Thonny) and restart it. The Pico will run `main.py` and begin streaming FSR data over USB. The bar light will indicate the current force level.
+
+![Hardware Photo](images/digit-fsr.jpg)
+
+## Running the GUI
+
+1. Connect your DIGIT sensor and Raspberry Pi Pico via USB.
+
+2. Modify the serial connection port if required in `serial_controller.py`. The default is `/dev/ttyACM0`.
+
+3. Run the GUI script:
+    ```bash
+    python3 digit_gui.py
+
+## Usage and Known Issues
+
+Please see original repo ([DIGIT-GUI](https://github.com/gemixin/digit-gui)) README.
 
 ## Citation
 
