@@ -585,6 +585,10 @@ class DigitGUI:
                         # If the frame meets the target force level, capture it
                         if force_reading is not None:
                             self.capture_frame(frame, force_reading)
+                        # Otherwise, update the status label
+                        else:
+                            self.capture_status_label.config(
+                                text='Waiting for target force level...')
                     # Display the current frame in the video label
                     # Convert frame (BGR to RGB)
                     frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
