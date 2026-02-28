@@ -260,7 +260,8 @@ class DigitGUI:
 
     def create_live_preview_frame(self):
         """
-        Create the live preview frame to display the video feed from DIGIT.
+        Create the live preview frame to display the video feed from DIGIT and the current
+        force reading.
 
         Returns:
             tk.LabelFrame: The live preview frame.
@@ -277,6 +278,12 @@ class DigitGUI:
         # Center the label in the live_view frame
         self.video_label.pack(padx=PADDING, pady=PADDING,
                               anchor='center', expand=True)
+
+        # Create a label to show the current force reading
+        self.force_label = tk.Label(live_preview_frame, text='Force:')
+
+        # Place the force label at the bottom of the live preview frame
+        self.force_label.pack(padx=PADDING, pady=PADDING, anchor='s')
 
         # Start the live video view
         self.view_running = True
@@ -575,15 +582,18 @@ class DigitGUI:
         # If the live view is running
         if self.view_running:
             try:
+                # Get the current force reading
+                force_reading = self.get_force_reading()
+                # Update the force label with the current force reading
+                self.force_label.config(text=f'Force: {force_reading:.4f}v')
                 # Get the current video frame from DIGIT
                 frame = self.dc.get_frame()
                 if frame is not None:
                     # If capturing frames, save the current frame
                     if self.capturing:
                         # Filter frame based on force level
-                        force_reading = self.filter_frame(frame)
-                        # If the frame meets the target force level, capture it
-                        if force_reading is not None:
+                        if self.get_force_level(force_reading) == self.target_force_level:
+                            # If the frame meets the target force level, capture it
                             self.capture_frame(frame, force_reading)
                         # Otherwise, update the status label
                         else:
@@ -873,36 +883,12 @@ class DigitGUI:
             # Save the frame in the directory specified by the user
             return self.user_save_dir
 
-    def get_force_level(self, reading):
+    def get_force_reading(self):
         """
-        Get the force level based on the reading from the serial connection.
-
-        Args:
-            reading (float): The reading from the serial connection.
+        Get the force reading from the serial connection.
 
         Returns:
-            int: The force level (1, 2 or 3) or 0 if invalid.
-        """
-
-        if reading > 0 and reading < 0.99:
-            return 1
-        elif reading >= 0.99 and reading <= 2.99:
-            return 2
-        elif reading > 2.99:
-            return 3
-        else:
-            return 0
-
-    def filter_frame(self, frame):
-        """
-        Filter frames based on the target force level.
-
-        Args:
-            frame (numpy.ndarray): The frame to filter.
-
-        Returns:
-            float: The force reading if the frame meets the target force level,
-            None otherwise.
+            float: The force reading from the serial connection.
         """
 
         # Get the current reading from the serial connection
@@ -924,12 +910,28 @@ class DigitGUI:
             self.disable_gui()
             self.show_lost_connection_popup('Serial')
 
-        # If the frame meets the target force level
-        if self.get_force_level(reading_float) == self.target_force_level:
-            # Return the reading
-            return reading_float
+        # Return the float
+        return reading_float
+
+    def get_force_level(self, reading):
+        """
+        Classify the force reading into a force level based on predefined thresholds.
+
+        Args:
+            reading (float): The reading from the serial connection.
+
+        Returns:
+            int: The force level (1, 2 or 3) or 0 if invalid.
+        """
+
+        if reading > 0 and reading < 0.99:
+            return 1
+        elif reading >= 0.99 and reading <= 2.99:
+            return 2
+        elif reading > 2.99:
+            return 3
         else:
-            return None
+            return 0
 
     def capture_frame(self, frame, force_reading):
         """
