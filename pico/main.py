@@ -22,7 +22,7 @@ uart = machine.UART(0, baudrate=115200)
 while True:
     value = fsr.read_u16()  # 16-bit value (0–65535)
     voltage = (value / 65535) * 3.3  # convert to voltage (assuming 3.3V ref)
-    
+
     # Set LED bar level according to level 1, 2 and 3 thresholds
     # Force level 2
     if voltage > 0.99 and voltage <= 2.99:
@@ -33,8 +33,7 @@ while True:
     # Force level 1
     else:
         ledbar.level(1, 0x0F)  # 1 bars at 50% brightness
-        
+
     # Print voltage (streams over USB)
     print(voltage)
-    time.sleep(0.033) # ~33 ms per sample = 30 Hz
-    
+    time.sleep(0.033)  # ~33 ms per sample = 30 Hz
