@@ -3,7 +3,7 @@ import serial
 # Constants
 BAUDRATE = 115200
 TIMEOUT = 1
-PORT = '/dev/ttyACM0'
+PORT = "/dev/ttyACM0"
 
 
 class SerialController:
@@ -38,9 +38,9 @@ class SerialController:
         if self.serial_connection:
             try:
                 self.serial_connection.reset_input_buffer()
-                return self.serial_connection.readline().decode('utf-8').rstrip()
+                return self.serial_connection.readline().decode("utf-8").rstrip()
             except Exception as e:
-                print(f'Failed to read from serial connection: {e}')
+                print(f"Failed to read from serial connection: {e}")
                 return None
 
     # --- Public setters/actions ---
@@ -51,4 +51,4 @@ class SerialController:
             try:
                 self.serial_connection.close()
             except Exception as e:
-                print(f'Failed to disconnect serial connection: {e}')
+                print(f"Failed to disconnect serial connection: {e}")
