@@ -19,6 +19,10 @@ MAX_INTERACTION_NUM = 9999
 MAX_COUNTDOWN_SECS = 10
 MAX_FORCE_LEVEL = 3
 
+# Voltage thresholds (uncomment the relevant thresholds based on which FSR you are using)
+# VOLTAGE_THRESHOLDS = [0.99, 2.99] # FSR 1
+VOLTAGE_THRESHOLDS = [0.92, 3.06]  # FSR 2
+
 
 class DigitGUI:
     """
@@ -932,11 +936,11 @@ class DigitGUI:
             int: The force level (1, 2 or 3) or 0 if invalid.
         """
 
-        if reading > 0 and reading < 0.99:
+        if reading > 0 and reading < VOLTAGE_THRESHOLDS[0]:
             return 1
-        elif reading >= 0.99 and reading <= 2.99:
+        elif reading >= VOLTAGE_THRESHOLDS[0] and reading <= VOLTAGE_THRESHOLDS[1]:
             return 2
-        elif reading > 2.99:
+        elif reading > VOLTAGE_THRESHOLDS[1]:
             return 3
         else:
             return 0
