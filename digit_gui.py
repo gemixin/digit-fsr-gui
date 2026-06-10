@@ -20,7 +20,7 @@ MAX_COUNTDOWN_SECS = 10
 MAX_FORCE_LEVEL = 3
 
 # Voltage thresholds (uncomment the relevant thresholds based on which FSR you are using)
-# VOLTAGE_THRESHOLDS = [0.99, 2.99] # FSR 1
+# VOLTAGE_THRESHOLDS = [0.99, 2.99]  # FSR 1
 VOLTAGE_THRESHOLDS = [0.91754631, 3.05528719]  # FSR 2
 
 
