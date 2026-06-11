@@ -55,7 +55,7 @@ FSR voltage data is mapped to three discrete target force levels (corresponding 
 
 6. Close any programs accessing the Pico (e.g., Thonny) and restart the device. The Pico will run `main.py` and begin streaming FSR data over USB. The bar light will indicate the current force level.
 
-![DIGIT and FSR](images/digit-fsr.jpg)
+![DIGIT and FSR](images/diagram.jpg)
 
 ## Running the GUI
 
