@@ -16,7 +16,7 @@ This version adds functionality specifically for force-conditioned tactile data 
 ## Requirements
 
 - **Operating System:** Linux only (DIGIT sensors are supported on Linux only)  
-- **Tested Environment:** Ubuntu 22.04, Python 3.10.12 
+- **Tested Environment:** Ubuntu 24.04, Python 3.12
 - **Python Environment:** Use a regular Python virtual environment (Tkinter and Anaconda have compatibility issues on Linux)
 - **Packages:** See `requirements.txt`
 
