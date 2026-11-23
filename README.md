@@ -26,15 +26,18 @@ This version adds functionality specifically for force-conditioned tactile data 
    ```bash
    git clone https://github.com/gemixin/digit-fsr-gui.git
    cd digit-fsr-gui
+   ```
 
 2. **(Optional) Set up a virtual environment:** 
     ```bash
     python3 -m venv .venv
     source .venv/bin/activate
+    ```
 
 3. **Install required packages:**  
     ```bash
     python3 -m pip install -r requirements.txt
+    ```
 
 ## Force
 
@@ -66,6 +69,7 @@ FSR voltage data is mapped to three discrete target force levels (corresponding 
 3. Run the GUI script:
     ```bash
     python3 digit_gui.py
+    ```
 
 ## Usage and Known Issues
 
